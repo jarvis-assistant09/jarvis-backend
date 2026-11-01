@@ -1,9 +1,10 @@
 import express from "express";
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: "2mb" }));
 
 const PORT = process.env.PORT || 3000;
+const VOICE_ID = "dfsWmmgleAAdssZ0Spld";
 
 app.get("/", (req, res) => {
   res.json({
@@ -24,7 +25,7 @@ app.post("/chat", async (req, res) => {
 
     if (!process.env.GEMINI_API_KEY) {
       return res.status(500).json({
-        error: "API key not configured"
+        error: "Gemini API key not configured"
       });
     }
 
@@ -71,7 +72,49 @@ app.post("/chat", async (req, res) => {
       });
     }
 
-    res.json({ reply });
+    let audio = null;
+
+    if (process.env.ELEVENLABS_API_KEY) {
+      try {
+        const voiceResponse = await fetch(
+          `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`,
+          {
+            method: "POST",
+            headers: {
+              "xi-api-key": process.env.ELEVENLABS_API_KEY,
+              "Content-Type": "application/json",
+              "Accept": "audio/mpeg"
+            },
+            body: JSON.stringify({
+              text: reply,
+              model_id: "eleven_multilingual_v2",
+              voice_settings: {
+                stability: 0.55,
+                similarity_boost: 0.8,
+                style: 0.3,
+                use_speaker_boost: true
+              }
+            }),
+            signal: AbortSignal.timeout(55000)
+          }
+        );
+
+        if (voiceResponse.ok) {
+          const audioBuffer = await voiceResponse.arrayBuffer();
+          audio = Buffer.from(audioBuffer).toString("base64");
+        } else {
+          console.error(
+            "ElevenLabs error:",
+            voiceResponse.status,
+            await voiceResponse.text()
+          );
+        }
+      } catch (voiceError) {
+        console.error("Voice generation error:", voiceError.message);
+      }
+    }
+
+    res.json({ reply, audio });
 
   } catch (error) {
     res.status(500).json({

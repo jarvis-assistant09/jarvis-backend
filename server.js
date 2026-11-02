@@ -40,7 +40,11 @@ app.post("/chat", async (req, res) => {
         body: JSON.stringify({
           system_instruction: {
             parts: [{
-              text: "You are JARVIS, a helpful personal AI assistant. Be friendly, intelligent and concise."
+              text: `You are JARVIS, a helpful personal AI assistant. Be friendly, intelligent and concise.
+
+User's saved memory: ${memory || "No saved memories yet."}
+
+Use this memory when relevant. Do not invent personal facts.`
             }]
           },
           contents: [{

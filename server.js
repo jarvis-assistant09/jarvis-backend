@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 app.post("/chat", async (req, res) => {
   try {
     const message = req.body.message;
-
+     const memory = req.body.memory || "";
     if (!message || typeof message !== "string") {
       return res.status(400).json({
         error: "Message is required"
